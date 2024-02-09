@@ -1,7 +1,6 @@
 let questions = JSON.parse(localStorage.getItem("questions")) || [];
 let score = 0;
-
-
+let count = 1;
 function addQuestion() {
   const questionInput = $("#question");
   const option1Input = $("#option1");
@@ -61,8 +60,9 @@ function displayQuestions() {
     currentQuestion = questions.splice(questionIndex, 1)[0]; // current question
 
     const output = $("<div>");
+    
     output.html(`
-    <h3>${questions.length + 1}. ${currentQuestion.question}</h3>
+    <h3>${count++}. ${currentQuestion.question}</h3>
     <form id="quizForm">
         <div class="form-check">
             <input class="form-check-input" type="radio" name="answer" id="option1" value="${currentQuestion.option1}">
