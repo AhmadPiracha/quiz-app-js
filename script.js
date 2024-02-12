@@ -1,30 +1,62 @@
-let questions = JSON.parse(localStorage.getItem("questions")) || [];
-let score = 0;
-let count = 1;
-function addQuestion() {
-  const questionInput = $("#question");
-  const option1Input = $("#option1");
-  const option2Input = $("#option2");
-  const option3Input = $("#option3");
-  const correctInput = $("#correct");
+var questions = JSON.parse(localStorage.getItem("questions")) || [];
+var score = 0;
+var timer;
+var currentQuestion = 0;
 
-  if (
-    !questionInput.val() ||
-    !option1Input.val() ||
-    !option2Input.val() ||
-    !option3Input.val() ||
-    !correctInput.val()
-  ) {
+$("#optSelect").on("change", function () {
+  updateOptions();
+});
+
+$("#questionsCount").text(function () {
+  $("#questionsCount").html(`Questions Avalible: <b>${questions.length}</b>`);
+
+  console.log(questions.length);
+});
+
+function mainMenu() {
+  clearInterval(timer);
+  $("#form").show();
+  $("#startQuiz").show();
+  $("#quiz-container").html("");
+}
+
+function addQuestion() {
+  const options = [];
+  const questionInput = $("#question");
+  const optionsSelect = $("#optSelect").val();
+  const displayOptionsContainer = $("#containerOptions");
+  const correctAnswer = $("#correct");
+
+  if (!questionInput.val() || !correctAnswer.val()) {
     alert("Please fill in all fields before submitting.");
     return;
   }
 
+  for (let i = 1; i <= optionsSelect; i++) {
+    const optionValue = $(`#option${i}`).val();
+
+    if (!optionValue) {
+      alert(`Please fill in Option ${i} before submitting.`);
+      return;
+    }
+
+    options.push(optionValue);
+  }
+
+  if (optionsSelect === 0) {
+    alert("Please select the number of options before submitting.");
+    return;
+  }
+
+  if (!options.includes(correctAnswer.val())) {
+    alert("The correct answer must be one of the provided options.");
+    return;
+  }
+
   const data = {
-    question: questionInput.val(),
-    option1: option1Input.val(),
-    option2: option2Input.val(),
-    option3: option3Input.val(),
-    correct: correctInput.val(),
+    question: $("#question").val(),
+    options: options,
+    correct: $("#correct").val(),
   };
 
   console.log(data);
@@ -32,98 +64,155 @@ function addQuestion() {
   questions.push(data);
 
   questionInput.val("");
-  option1Input.val("");
-  option2Input.val("");
-  option3Input.val("");
-  correctInput.val("");
+  displayOptionsContainer.find("input").val("");
+  $("#optSelect").val(0);
+  displayOptionsContainer.empty();
+  correctAnswer.val("");
 
   // Save to local storage
   localStorage.setItem("questions", JSON.stringify(questions));
 
   alert(`
-        Question added successfully. 
-        Total questions: ${questions.length}
-    `);
+    Question added successfully. Total questions: ${questions.length}`);
 }
 
-$("#startQuiz").on("click", function () {
-  $("#form").hide();
-  $("#startQuiz").hide();
-  displayQuestions();
-});
-
 function displayQuestions() {
+  reset();
   $("#quiz-container").html("");
-
   if (questions.length > 0) {
-    const questionIndex = 0;
-    currentQuestion = questions.splice(questionIndex, 1)[0]; // current question
+    // get the current value from list
+    // currentQuestion = questions.splice(0, 1)[0];
 
-    const output = $("<div>");
-    
-    output.html(`
-    <h3>${count++}. ${currentQuestion.question}</h3>
-    <form id="quizForm">
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="answer" id="option1" value="${currentQuestion.option1}">
-            <label class="form-check-label" for="option1">${currentQuestion.option1}</label>
-        </div>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="answer" id="option2" value="${currentQuestion.option2}">
-            <label class="form-check-label" for="option2">${currentQuestion.option2}</label>
-        </div>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="answer" id="option3" value="${currentQuestion.option3}">
-            <label class="form-check-label" for="option3">${currentQuestion.option3}</label>
-        </div>
-        <button type="button" onclick="submitAnswer()" class="btn btn-primary">Submit Answer</button>
-    </form>
-    <p id="result"></p>
-    <button id="endQuiz" class="btn btn-danger">End Quiz</button>
+    // get random value from list
+    currentQuestion = questions.splice(
+      Math.floor(Math.random() * questions.length),
+      1
+    )[0];
+
+    console.log(currentQuestion);
+
+    const diplayQuestions = $("<div>");
+
+    diplayQuestions.html(`
+          <h3>${currentQuestion.question}</h3>
+          <form id="quizForm">
+          <p id="timer" class="mt-3"></p>
+              ${currentQuestion.options
+                .map(
+                  (option, index) => `
+                  <div class="form-check">
+                      <input class="form-check-input" type="radio" name="answer" id="option${
+                        index + 1
+                      }" value="${option}">
+                      <label class="form-check-label" for="option${
+                        index + 1
+                      }">${option}</label>
+                  </div>`
+                )
+                .join("")}
+              <button type="button" onclick="submitAnswer()" class="btn btn-primary ms-2">Submit Answer</button>
+          </form>
+          <br/>
+          <button id="endQuiz" 
+              class="btn btn-danger ms-2" onclick="endQuizFun()">
+              End Quiz
+          </button>
+      `);
+
+    $("#quiz-container").append(diplayQuestions);
+  } else {
+    const displayResult = $("<div>");
+
+    displayResult.append(`
+    <h3>Your final score: ${score}</h3>
+    ${currentQuestion.options
+      .map(
+        (question, index) => `
+        <h4>Question ${index + 1}: ${question}</h4>
+        
+        <p>Correct Answer: ${question.correct}</p>
+        `
+      )
+      .join("")}
+
+    `);
+
+    displayResult.append(`
+  <button id="mainMenu" onclick="mainMenu()" class="btn btn-primary">Menu</button>
 `);
 
-
-    $("#quiz-container").prepend(output);
-
-    $("#endQuiz").on("click", function () {
-      $("#form").show();
-      $("#startQuiz").show();
-      $("#quiz-container").html("");
-    });
-  } else {
-    $("#quiz-container").html(`<h3>Quiz completed. Your final score: ${score}</h3>`);
-    $("#form").show();
-    $("#startQuiz").show();
+    $("#quiz-container").append(displayResult);
   }
+}
+
+function startTimer() {
+  var timeRemaining = 15;
+  timer = setInterval(function () {
+    $("#timer").text("Time remaining: " + timeRemaining + "s");
+    if (timeRemaining === 0) {
+      reset();
+      displayQuestions();
+    }
+    timeRemaining--;
+  }, 1000);
+}
+
+function reset() {
+  clearInterval(timer);
+  startTimer();
+}
+
+function startQuizFun() {
+  if (questions.length == 0) {
+    alert("No Quiz Found");
+    $("#form").show();
+  } else {
+    $("#form").hide();
+    $("#startQuiz").hide();
+    displayQuestions();
+    $("#timer").text("Time remaining: 15s");
+    reset();
+  }
+}
+
+function endQuizFun() {
+  console.log("end called");
+  clearInterval(timer);
+  $("#form").show();
+  $("#startQuiz").show();
+  $("#quiz-container").html("");
 }
 
 function submitAnswer() {
   const selected = $('input[name="answer"]:checked');
-//   console.log("Selected answer:", selected.val());
 
   if (!selected.val()) {
     alert("Please select an answer before submitting.");
     return;
   }
-
   const userAnswer = selected.val();
   const correct = currentQuestion ? currentQuestion.correct : null;
 
-//   console.log("User answer:", userAnswer);
-//   console.log("Correct answer:", correct);
-
   if (userAnswer === correct) {
-    $("#result").html("Correct!");
     score += 5;
-  } else {
-    $("#result").html(`Incorrect Error`);
-    alert("Your answer is incorrect. Please try again.");
-    return;
+    reset();
   }
-
-    // Display score for the current question and running total
-    $("#result").append(`<p>Score for this question: 5</p>`);
-    $("#result").append(`<p>Total Score: ${score}</p>`);
-  
   displayQuestions();
+}
+
+function updateOptions() {
+  const optionSelect = $("#optSelect").val();
+  const displayOptionsContainer = $("#containerOptions");
+
+  displayOptionsContainer.html("");
+  for (let i = 1; i <= optionSelect; i++) {
+    displayOptionsContainer.append(`
+      <div class="mb-3">
+        <input type="text" class="form-control" id="option${i}" name="option${i}" placeholder="Enter Option ${i}" required />
+      </div>`);
+  }
+}
+
+function deleteData() {
+  localStorage.clear();
 }
